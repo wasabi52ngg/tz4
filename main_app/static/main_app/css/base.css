@@ -27,3 +27,9 @@ a:hover {
     margin: 0 auto;
     padding: 0 20px;
 }
+
+/* Базовые стили для карт */
+html, body {
+    margin: 0;
+    padding: 0;
+}

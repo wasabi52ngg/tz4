@@ -2,7 +2,6 @@
  * JavaScript для страницы карты компаний (Yandex Maps API v2.1)
  */
 
-console.log('=== НАЧАЛО ЗАГРУЗКИ СКРИПТА ===');
 
 // Глобальные переменные
 let companiesData = [];
@@ -33,7 +32,12 @@ function updateCompaniesInfoFinal(placedMarkers) {
 
 // Геокодирование через HTTP API
 function geocodeAddress(address, company, index, placemarks, callback) {
-    const apiKey = '8d8649ce-966c-4c33-a023-5f63bc40a657';
+    const apiKey = window.apiKey;
+    if (!apiKey) {
+        console.error('API ключ не найден');
+        callback();
+        return;
+    }
     const encodedAddress = encodeURIComponent(address);
     const url = `https://geocode-maps.yandex.ru/v1/?apikey=${apiKey}&geocode=${encodedAddress}&format=json&results=1`;
     
