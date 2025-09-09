@@ -9,6 +9,9 @@ from integration_utils.bitrix24.local_settings_class import LocalSettingsClass
 # Настройки вашего приложения
 # Добавьте здесь свои API ключи и настройки
 
+# API ключ для Яндекс карт
+YANDEX_MAPS_API_KEY = 'YANDEX_MAPS_API_KEY'
+
 APP_SETTINGS = LocalSettingsClass(
     portal_domain='your-portal.bitrix24.ru',
     app_domain='127.0.0.1:8000',
