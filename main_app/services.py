@@ -35,7 +35,7 @@ class BitrixCompanyService:
                 'crm.address.list',
                 {
                     'filter': {
-                        'ENTITY_TYPE_ID': 4,  # Тип объекта "Компания"
+                        'ENTITY_TYPE_ID': 4,
                         'ENTITY_ID': company_id
                     },
                     'select': ['TYPE_ID', 'ADDRESS_1', 'ADDRESS_2', 'CITY', 'POSTAL_CODE', 'REGION', 'PROVINCE', 'COUNTRY']
@@ -61,11 +61,9 @@ class BitrixCompanyService:
                 company_id = company['ID']
                 company_title = company.get('TITLE', 'Без названия')
                 
-                # Получаем адреса для компании
                 addresses_response = self.get_company_addresses(company_id)
                 addresses = addresses_response.get('result', [])
                 
-                # Форматируем адреса
                 formatted_addresses = []
                 for address in addresses:
                     address_parts = []

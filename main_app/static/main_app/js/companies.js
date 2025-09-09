@@ -13,7 +13,7 @@ function updateCompaniesInfo() {
     console.log('Обновление информации о компаниях...');
     const countElement = document.getElementById('companies-count');
     if (companiesData && companiesData.length > 0) {
-        countElement.textContent = `Найдено компаний: ${companiesData.length}`;
+        countElement.textContent = `Найдено компаний: ${companiesData.length}. Геокодирование адресов...`;
         console.log(`Установлено количество компаний: ${companiesData.length}`);
     } else {
         countElement.textContent = 'Компании не найдены';
@@ -21,7 +21,72 @@ function updateCompaniesInfo() {
     }
 }
 
-// Добавляем метки компаний на карту
+// Обновляем финальную информацию о компаниях
+function updateCompaniesInfoFinal(placedMarkers) {
+    console.log('Обновление финальной информации о компаниях...');
+    const countElement = document.getElementById('companies-count');
+    if (countElement) {
+        countElement.textContent = `Найдено компаний: ${companiesData.length}. Отображено меток: ${placedMarkers}`;
+        console.log(`Финальная информация: ${companiesData.length} компаний, ${placedMarkers} меток`);
+    }
+}
+
+// Геокодирование через HTTP API
+function geocodeAddress(address, company, index, placemarks, callback) {
+    const apiKey = '8d8649ce-966c-4c33-a023-5f63bc40a657';
+    const encodedAddress = encodeURIComponent(address);
+    const url = `https://geocode-maps.yandex.ru/v1/?apikey=${apiKey}&geocode=${encodedAddress}&format=json&results=1`;
+    
+    console.log(`HTTP геокодирование для ${company.title}: ${url}`);
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            console.log(`HTTP результат для ${company.title}:`, data);
+            
+            if (data.response && data.response.GeoObjectCollection && data.response.GeoObjectCollection.featureMember && data.response.GeoObjectCollection.featureMember.length > 0) {
+                const geoObject = data.response.GeoObjectCollection.featureMember[0].GeoObject;
+                const coords = geoObject.Point.pos.split(' ').map(Number);
+                // Конвертируем из долгота,широта в широта,долгота
+                const coordsCorrected = [coords[1], coords[0]];
+                
+                console.log(`Координаты для ${company.title}:`, coordsCorrected);
+                
+                // Выбираем цвет метки в зависимости от типа компании
+                const markerColor = getMarkerColor(company.company_type);
+                
+                // Создаем метку с подсказкой и названием
+                const placemark = new ymaps.Placemark(coordsCorrected, {
+                    hintContent: company.title,
+                    iconCaption: company.title,
+                    balloonContentHeader: company.title,
+                    balloonContentBody: createBalloonContent(company),
+                    balloonContentFooter: `ID: ${company.id}`
+                }, {
+                    preset: markerColor,
+                    balloonMaxWidth: 300,
+                    iconCaptionMaxWidth: 200,
+                    iconCaptionOffset: [0, -5]
+                });
+                
+                placemarks.push(placemark);
+                map.geoObjects.add(placemark);
+                
+                console.log(`Метка добавлена для ${company.title}`);
+                callback();
+            } else {
+                console.warn(`Не удалось найти координаты для адреса: ${address} (компания: ${company.title})`);
+                callback();
+            }
+        })
+        .catch(error => {
+            console.error(`Ошибка HTTP геокодирования для ${company.title}:`, error);
+            callback();
+        });
+}
+
+
+// Добавляем метки компаний на карту с геокодированием
 function addCompanyMarkers() {
     console.log('=== ДОБАВЛЕНИЕ МЕТОК КОМПАНИЙ ===');
     
@@ -31,47 +96,38 @@ function addCompanyMarkers() {
     }
 
     const placemarks = [];
-    
-    // Координаты для Санкт-Петербурга (правильный порядок: широта, долгота)
-    // Основаны на реальных адресах из данных компаний
-    const spbCoords = [
-        [59.9411, 30.3151], // Васильевский остров (Малый проспект В.О., 83)
-        [59.9351, 30.3251], // Васильевский остров (улица Шевченко, 19) - немного смещено
-        [59.9451, 30.3051], // Васильевский остров (12-13-я линии В.О., 22) - немного смещено
-        [59.9311, 30.3351], // Центр СПб (Дворцовая площадь)
-        [59.9211, 30.3551]  // Петроградская сторона (Петропавловская крепость)
-    ];
+    let geocodedCount = 0;
 
     companiesData.forEach((company, index) => {
         console.log(`Обработка компании ${index + 1}:`, company.title);
         
-        // Используем координаты по индексу (циклически)
-        const coords = spbCoords[index % spbCoords.length];
-        
-        // Выбираем цвет метки в зависимости от типа компании
-        const markerColor = getMarkerColor(company.company_type);
-        
-        // Создаем метку с подсказкой и названием
-        const placemark = new ymaps.Placemark(coords, {
-            hintContent: company.title,
-            iconCaption: company.title,
-            balloonContentHeader: company.title,
-            balloonContentBody: createBalloonContent(company),
-            balloonContentFooter: `ID: ${company.id}`
-        }, {
-            preset: markerColor,
-            balloonMaxWidth: 300,
-            iconCaptionMaxWidth: 200,
-            iconCaptionOffset: [0, -5]
-        });
-        
-        placemarks.push(placemark);
-        map.geoObjects.add(placemark);
-        
-        console.log(`Метка добавлена для ${company.title} в координатах:`, coords);
+        // Добавляем задержку между запросами
+        setTimeout(() => {
+            // Берем первый адрес компании (если есть)
+            if (company.addresses && company.addresses.length > 0) {
+                const address = company.addresses[0];
+                console.log(`Геокодирование адреса: ${address}`);
+                
+                // Геокодируем адрес через HTTP API
+                geocodeAddress(address, company, index, placemarks, () => {
+                    geocodedCount++;
+                    console.log(`Обработано компаний: ${geocodedCount}/${companiesData.length}`);
+                    if (geocodedCount === companiesData.length) {
+                        fitMapToMarkers(placemarks);
+                        updateCompaniesInfoFinal(placemarks.length);
+                    }
+                });
+            } else {
+                console.warn(`У компании ${company.title} нет адресов`);
+                callback();
+            }
+        }, index * 500); // Задержка 500мс между запросами
     });
-    
-    // Подгоняем карту под все метки
+}
+
+// Подгоняем карту под все метки
+function fitMapToMarkers(placemarks) {
+    console.log('Подгонка карты под метки...');
     if (placemarks.length > 0) {
         map.geoObjects.getBounds().then(function (bounds) {
             map.setBounds(bounds, {
@@ -126,59 +182,6 @@ function getMarkerColor(companyType) {
     return colorMap[companyType] || 'islands#blueDotIcon'; // По умолчанию синий
 }
 
-// Добавляем легенду карты
-function addMapLegend() {
-    console.log('Добавление легенды карты...');
-    
-    const legendContent = `
-        <div style="background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-family: Arial, sans-serif; font-size: 12px;">
-            <h4 style="margin: 0 0 10px 0; color: #333;">Типы компаний:</h4>
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #0066cc; border-radius: 50%;"></div>
-                    <span>Клиент</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #00cc66; border-radius: 50%;"></div>
-                    <span>Поставщик</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #ff9900; border-radius: 50%;"></div>
-                    <span>Партнер</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #cc0000; border-radius: 50%;"></div>
-                    <span>Конкурент</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #9900cc; border-radius: 50%;"></div>
-                    <span>Реселлер</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; background: #666666; border-radius: 50%;"></div>
-                    <span>Другое</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Создаем легенду как балун в левом верхнем углу
-    const legendBalloon = new ymaps.Balloon(map, {
-        layout: 'default#imageWithContent',
-        imageLayout: 'default#image',
-        imageOffset: [0, 0],
-        imageShape: {
-            type: 'Rectangle',
-            coordinates: [[0, 0], [0, 0]]
-        }
-    });
-    
-    // Добавляем легенду в левый верхний угол карты
-    map.balloon.open([59.9311, 30.3351], legendContent, {
-        closeButton: false,
-        autoPan: false
-    });
-}
 
 
 // Инициализация карты с использованием ymaps v2.1
@@ -220,9 +223,6 @@ function initMap() {
             
             // Добавляем метки компаний на карту
             addCompanyMarkers();
-            
-            // Добавляем легенду карты
-            addMapLegend();
             
             // Обновляем информацию о компаниях
             updateCompaniesInfo();
