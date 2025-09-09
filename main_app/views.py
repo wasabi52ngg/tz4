@@ -4,7 +4,7 @@ from django.conf import settings
 from .services import BitrixCompanyService
 
 
-@main_auth(on_start=True, on_cookies=True)
+@main_auth(on_cookies=True)
 def index(request):
     """Главная страница приложения"""
     app_settings = settings.APP_SETTINGS
