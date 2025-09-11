@@ -48,8 +48,6 @@
     
     // Передаем данные компаний в JavaScript
     const companiesDataFromDjango = {{ companies|safe }};
-    console.log('Данные компаний получены:', companiesDataFromDjango);
-    console.log('Тип данных компаний:', typeof companiesDataFromDjango);
     
     // Устанавливаем данные и инициализируем страницу
     CompaniesMap.setCompaniesData(companiesDataFromDjango);

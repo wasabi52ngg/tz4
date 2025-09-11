@@ -190,8 +190,7 @@ function getMarkerColor(companyType) {
 
 // Инициализация карты с использованием ymaps v2.1
 function initMap() {
-    console.log('=== НАЧАЛО ИНИЦИАЛИЗАЦИИ КАРТЫ ===');
-    
+
     try {
         console.log('Проверка доступности ymaps...');
         console.log('typeof ymaps:', typeof ymaps);
@@ -213,16 +212,14 @@ function initMap() {
             }
 
             console.log('Создание карты...');
-            // Создаем карту точно как в примере из документации
             map = new ymaps.Map("map", {
-                center: [59.9311, 30.3351], // Санкт-Петербург (Дворцовая площадь) - широта, долгота
+                center: [59.9311, 30.3351],
                 zoom: 11
             }, {
                 searchControlProvider: "yandex#search"
             });
             console.log('Карта создана:', map);
 
-            console.log('=== КАРТА УСПЕШНО ИНИЦИАЛИЗИРОВАНА ===');
             console.log('Данные компаний для отображения:', companiesData);
             
             // Добавляем метки компаний на карту
@@ -286,5 +283,3 @@ window.CompaniesMap = {
         console.log('Данные компаний установлены:', companiesData);
     }
 };
-
-console.log('=== КОНЕЦ ЗАГРУЗКИ СКРИПТА ===');
